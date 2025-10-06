@@ -16,15 +16,59 @@ export default function App() {
   });
   const [imoSearch, setImoSearch] = useState('');
   const [searchResult, setSearchResult] = useState(null);
+  const [fleetSearch, setFleetSearch] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
 
-  const mockIMODatabase = {
-    '9123456': { name: 'Pacific Voyager', type: 'Container Ship', dwt: 50000, flag: 'Panama' },
-    '9234567': { name: 'Atlantic Star', type: 'Bulk Carrier', dwt: 75000, flag: 'Liberia' },
-    '9345678': { name: 'Mediterranean Queen', type: 'Tanker', dwt: 100000, flag: 'Malta' },
-    '9456789': { name: 'Arctic Explorer', type: 'Research Vessel', dwt: 12000, flag: 'Norway' },
-    '9567890': { name: 'Indian Ocean Spirit', type: 'Container Ship', dwt: 85000, flag: 'Singapore' }
+  const mockVesselDatabase = {
+    '9739368': {
+      name: 'EVER GIVEN',
+      mmsi: '353136000',
+      type: 'Container Ship',
+      flag: 'Panama',
+      length: '399.94 m',
+      beam: '58.8 m',
+      grossTonnage: '220,940',
+      image: 'https://images.vesseltracker.com/images/vessels/mid/Ever-Given-9739368.jpg'
+    }
+  };
+
+  const fetchVesselDetails = async (imo) => {
+    try {
+      setIsSearching(true);
+      setError('');
+      
+      try {
+        const response = await fetch(`http://localhost:3001/api/vessel/${imo}`);
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Fetched from backend API:', data);
+          return data;
+        } else {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Vessel not found');
+        }
+      } catch (apiError) {
+        console.log('Backend API error:', apiError.message);
+        
+        if (mockVesselDatabase[imo]) {
+          console.log('Using mock database');
+          return {
+            imo: imo,
+            ...mockVesselDatabase[imo]
+          };
+        }
+        
+        throw new Error(`Unable to fetch vessel. Make sure the backend server is running on http://localhost:3001`);
+      }
+      
+    } catch (err) {
+      console.error('Error fetching vessel:', err);
+      throw err;
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   const handleRegister = () => {
@@ -83,16 +127,25 @@ export default function App() {
     setCurrentPage('login');
     setImoSearch('');
     setSearchResult(null);
+    setFleetSearch('');
   };
 
-  const handleIMOSearch = () => {
+  const handleIMOSearch = async () => {
     setError('');
+    setSearchResult(null);
     
-    const vessel = mockIMODatabase[imoSearch];
-    if (vessel) {
-      setSearchResult({ imo: imoSearch, ...vessel });
-    } else {
-      setError('Vessel not found. Try IMO: 9123456, 9234567, 9345678, 9456789, or 9567890');
+    const trimmedIMO = imoSearch.trim();
+    
+    if (!trimmedIMO || trimmedIMO.length < 6) {
+      setError('Please enter a valid IMO number (6-7 digits)');
+      return;
+    }
+    
+    try {
+      const vesselData = await fetchVesselDetails(trimmedIMO);
+      setSearchResult(vesselData);
+    } catch (err) {
+      setError(err.message || 'Vessel not found. Please check the IMO number and try again.');
       setSearchResult(null);
     }
   };
@@ -285,6 +338,16 @@ export default function App() {
 
   const renderDashboard = () => {
     const userVessels = vessels[currentUser.id] || [];
+    
+    const filteredVessels = userVessels.filter(vessel => {
+      const searchLower = fleetSearch.toLowerCase();
+      return (
+        vessel.name.toLowerCase().includes(searchLower) ||
+        vessel.imo.includes(searchLower) ||
+        vessel.type.toLowerCase().includes(searchLower) ||
+        vessel.flag.toLowerCase().includes(searchLower)
+      );
+    });
 
     return (
       <div className="min-h-screen bg-gray-50">
@@ -336,45 +399,71 @@ export default function App() {
                     value={imoSearch}
                     onChange={(e) => setImoSearch(e.target.value)}
                     onKeyPress={(e) => handleKeyPress(e, handleIMOSearch)}
-                    placeholder="Enter IMO Number (e.g., 9123456)"
+                    placeholder="Enter IMO Number (e.g., 1002756)"
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
                 <button
                   onClick={handleIMOSearch}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                  disabled={isSearching}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
-                  Search
+                  {isSearching ? 'Searching...' : 'Search'}
                 </button>
               </div>
             </div>
 
             {searchResult && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-800">{searchResult.name}</h3>
-                    <p className="text-gray-600">IMO: {searchResult.imo}</p>
-                  </div>
-                  <button
-                    onClick={handleAddVessel}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold"
-                  >
-                    Add to Fleet
-                  </button>
-                </div>
-                <div className="grid grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-600">Type:</span>
-                    <p className="font-semibold text-gray-800">{searchResult.type}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">DWT:</span>
-                    <p className="font-semibold text-gray-800">{searchResult.dwt.toLocaleString()} tons</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Flag:</span>
-                    <p className="font-semibold text-gray-800">{searchResult.flag}</p>
+                <div className="flex flex-col md:flex-row gap-6">
+                  {searchResult.image && (
+                    <div className="md:w-64 flex-shrink-0">
+                      <img 
+                        src={searchResult.image} 
+                        alt={searchResult.name}
+                        className="w-full h-48 object-cover rounded-lg shadow-md"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.parentElement.innerHTML = '<div class="w-full h-48 bg-gray-200 rounded-lg flex items-center justify-center"><svg class="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></div>';
+                        }}
+                      />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h3 className="text-xl font-bold text-gray-800">{searchResult.name}</h3>
+                        <p className="text-gray-600 text-sm">IMO: {searchResult.imo} {searchResult.mmsi !== 'N/A' && `| MMSI: ${searchResult.mmsi}`}</p>
+                      </div>
+                      <button
+                        onClick={handleAddVessel}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold whitespace-nowrap shadow-md"
+                      >
+                        Add to Fleet
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <span className="text-gray-600">Type:</span>
+                        <p className="font-semibold text-gray-800">{searchResult.type}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Flag:</span>
+                        <p className="font-semibold text-gray-800">{searchResult.flag}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Length:</span>
+                        <p className="font-semibold text-gray-800">{searchResult.length}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Beam:</span>
+                        <p className="font-semibold text-gray-800">{searchResult.beam}</p>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-gray-600">Gross Tonnage:</span>
+                        <p className="font-semibold text-gray-800">{searchResult.grossTonnage}</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -387,37 +476,84 @@ export default function App() {
               My Fleet ({userVessels.length})
             </h2>
 
+            {userVessels.length > 0 && (
+              <div className="mb-6">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    type="text"
+                    value={fleetSearch}
+                    onChange={(e) => setFleetSearch(e.target.value)}
+                    placeholder="Search by vessel name, IMO, type, or flag..."
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                {fleetSearch && (
+                  <p className="text-sm text-gray-600 mt-2">
+                    Showing {filteredVessels.length} of {userVessels.length} vessels
+                  </p>
+                )}
+              </div>
+            )}
+
             {userVessels.length === 0 ? (
               <div className="text-center py-12">
                 <Ship className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <p className="text-gray-500 text-lg">No vessels added yet</p>
                 <p className="text-gray-400 text-sm">Search and add vessels using the form above</p>
               </div>
+            ) : filteredVessels.length === 0 ? (
+              <div className="text-center py-12">
+                <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500 text-lg">No vessels match your search</p>
+                <p className="text-gray-400 text-sm">Try different keywords</p>
+              </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {userVessels.map((vessel, index) => (
-                  <div key={index} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                {filteredVessels.map((vessel, index) => (
+                  <div key={index} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow bg-white">
+                    {vessel.image && (
+                      <div className="mb-3 overflow-hidden rounded-lg bg-gray-100">
+                        <img 
+                          src={vessel.image} 
+                          alt={vessel.name}
+                          className="w-full h-40 object-cover hover:scale-105 transition-transform duration-300"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.parentElement.innerHTML = '<div class="w-full h-40 bg-gray-200 flex items-center justify-center"><svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></div>';
+                          }}
+                        />
+                      </div>
+                    )}
                     <div className="flex items-start justify-between mb-3">
-                      <Ship className="w-8 h-8 text-blue-600" />
+                      <Ship className="w-6 h-6 text-blue-600 flex-shrink-0" />
                       <span className="text-xs text-gray-500">
-                        Added {new Date(vessel.addedDate).toLocaleDateString()}
+                        {new Date(vessel.addedDate).toLocaleDateString()}
                       </span>
                     </div>
-                    <h3 className="font-bold text-lg text-gray-800 mb-1">{vessel.name}</h3>
+                    <h3 className="font-bold text-lg text-gray-800 mb-1 line-clamp-1">{vessel.name}</h3>
                     <p className="text-sm text-gray-600 mb-3">IMO: {vessel.imo}</p>
                     <div className="space-y-1 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Type:</span>
-                        <span className="font-medium text-gray-800">{vessel.type}</span>
+                        <span className="font-medium text-gray-800 text-right truncate ml-2">{vessel.type}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">DWT:</span>
-                        <span className="font-medium text-gray-800">{vessel.dwt.toLocaleString()} t</span>
-                      </div>
+                      {vessel.length && vessel.length !== 'N/A' && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Length:</span>
+                          <span className="font-medium text-gray-800">{vessel.length}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between">
                         <span className="text-gray-600">Flag:</span>
-                        <span className="font-medium text-gray-800">{vessel.flag}</span>
+                        <span className="font-medium text-gray-800 text-right truncate ml-2">{vessel.flag}</span>
                       </div>
+                      {vessel.grossTonnage && vessel.grossTonnage !== 'N/A' && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">GT:</span>
+                          <span className="font-medium text-gray-800">{vessel.grossTonnage}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
