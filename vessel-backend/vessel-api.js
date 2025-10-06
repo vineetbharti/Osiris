@@ -1,6 +1,3 @@
-// vessel-api.js - Backend API to fetch vessel data from VesselFinder
-// Based on your Python crawler implementation
-
 const express = require('express');
 const axios = require('axios');
 const cheerio = require('cheerio');
@@ -33,62 +30,32 @@ async function fetchVesselPage(url, maxRetries = 5) {
       });
 
       if (response.status === 200) {
-        console.log(`[${url}] Success on attempt ${attempt}`);
         return response.data;
       } else if (response.status === 429) {
         const waitTime = (5 * attempt + randomDelay(1, 5)) * 1000;
-        console.log(`[${url}] Rate limited (429). Sleeping ${waitTime / 1000}s...`);
         await sleep(waitTime);
-        continue;
       } else if (response.status === 404) {
-        console.log(`[${url}] Not found (404).`);
         return null;
       } else {
-        console.log(`[${url}] HTTP ${response.status}, retry ${attempt}/${maxRetries}`);
         await sleep(2000 * attempt);
-        continue;
       }
     } catch (error) {
-      if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
-        const waitTime = (2 * attempt + randomDelay(0.5, 2.0)) * 1000;
-        console.log(`[${url}] Timeout. Retrying in ${waitTime / 1000}s...`);
-        await sleep(waitTime);
-        continue;
-      } else if (error.response) {
-        const status = error.response.status;
-        if (status === 429) {
-          const waitTime = (5 * attempt + randomDelay(1, 5)) * 1000;
-          console.log(`[${url}] Rate limited. Sleeping ${waitTime / 1000}s...`);
-          await sleep(waitTime);
-          continue;
-        } else if (status === 404) {
-          console.log(`[${url}] Not found (404).`);
-          return null;
-        }
-      }
-      
       const waitTime = (2 * attempt + randomDelay(0.5, 2.0)) * 1000;
-      console.log(`[${url}] Error: ${error.message}. Retrying in ${waitTime / 1000}s...`);
       await sleep(waitTime);
     }
   }
-
-  console.log(`[${url}] Failed after ${maxRetries} retries.`);
   return null;
 }
 
-// Parse vessel details matching your Python implementation
 function parseVesselDetails(html, imo) {
   const $ = cheerio.load(html);
   
-  // Extract vessel name from h1 or title
   let name = $('h1').first().text().trim();
   if (!name) {
     const titleText = $('title').text();
     name = titleText.split('|')[0].split('-')[0].trim();
   }
   
-  // Initialize vessel data object
   const vesselData = {
     imo: imo,
     name: name || 'Unknown Vessel',
@@ -102,26 +69,18 @@ function parseVesselDetails(html, imo) {
     allData: {}
   };
   
-  // Find all ship-section elements (matching your Python code)
   const shipSections = $('section.ship-section');
   
-  console.log(`Found ${shipSections.length} ship sections`);
-  
-  // Loop through each ship-section
   shipSections.each((sectionIdx, section) => {
-    // Find tables with class tpt1 or tpt2
     $(section).find('table.tpt1, table.tpt2').each((tableIdx, table) => {
-      // Extract all rows
       $(table).find('tr').each((rowIdx, row) => {
         const cells = $(row).find('td');
         if (cells.length === 2) {
           const key = $(cells[0]).text().trim();
           const value = $(cells[1]).text().trim() || 'N/A';
           
-          // Store in allData
           vesselData.allData[key] = value;
           
-          // Map to specific fields (case-insensitive matching)
           const keyLower = key.toLowerCase();
           
           if (keyLower.includes('mmsi')) {
@@ -142,57 +101,42 @@ function parseVesselDetails(html, imo) {
     });
   });
   
-  // Extract vessel image - multiple approaches
   let imageUrl = null;
   
-  // Method 1: Look for img with ship/vessel in alt or class
-  const imgSelectors = [
-    'img[src*="static.vesselfinder"]',
-    'img[src*="ship-photo"]',
-    'img[alt*="vessel"]',
-    'img[alt*="ship"]',
-    'img[itemprop="image"]',
-    '.vessel-image img',
-    '#vessel-photo img',
-    '.ship-photo img',
-    'img[class*="vessel"]',
-    'img[class*="ship"]'
-  ];
-  
-  for (const selector of imgSelectors) {
-    const imgSrc = $(selector).first().attr('src');
-    if (imgSrc) {
-      imageUrl = imgSrc.startsWith('http') ? imgSrc : `https://www.vesselfinder.com${imgSrc}`;
-      break;
-    }
+  const shipPhotosLink = $('a[href*="/ship-photos/"]').first().attr('href');
+  if (shipPhotosLink) {
+    const fullPhotoUrl = shipPhotosLink.startsWith('http') ? shipPhotosLink : `https://www.vesselfinder.com${shipPhotosLink}`;
+    imageUrl = fullPhotoUrl;
   }
   
-  // Method 2: Look for data-src attribute (lazy loading)
   if (!imageUrl) {
-    const dataSrc = $('img[data-src*="static.vesselfinder"]').first().attr('data-src');
-    if (dataSrc) {
-      imageUrl = dataSrc.startsWith('http') ? dataSrc : `https://www.vesselfinder.com${dataSrc}`;
+    const imgSelectors = [
+      'img[src*="ship-photo"]:not([src*="logo"])',
+      'img[src*="static.vesselfinder.net/ship-photo"]',
+      '.vessel-image img:not([src*="logo"])',
+      '#vessel-photo img:not([src*="logo"])'
+    ];
+    
+    for (const selector of imgSelectors) {
+      const imgSrc = $(selector).first().attr('src');
+      if (imgSrc && !imgSrc.includes('logo')) {
+        imageUrl = imgSrc.startsWith('http') ? imgSrc : `https://www.vesselfinder.com${imgSrc}`;
+        break;
+      }
     }
   }
   
   vesselData.image = imageUrl;
   
-  console.log(`Parsed vessel: ${vesselData.name}`);
-  console.log(`  MMSI: ${vesselData.mmsi}`);
-  console.log(`  Type: ${vesselData.type}`);
-  console.log(`  Length: ${vesselData.length}`);
-  console.log(`  Image: ${imageUrl ? 'Found' : 'Not found'}`);
-  console.log(`  Total fields extracted: ${Object.keys(vesselData.allData).length}`);
+  console.log(`Parsed: ${vesselData.name}, Image: ${imageUrl ? 'Found' : 'Not found'}`);
   
   return vesselData;
 }
 
-// API endpoint to fetch vessel by IMO
 app.get('/api/vessel/:imo', async (req, res) => {
   try {
     const { imo } = req.params;
     
-    // Validate IMO format (6 or 7 digits)
     if (!/^\d{6,7}$/.test(imo)) {
       return res.status(400).json({ 
         error: 'Invalid IMO format',
@@ -200,7 +144,7 @@ app.get('/api/vessel/:imo', async (req, res) => {
       });
     }
     
-    console.log(`\nFetching vessel data for IMO: ${imo}`);
+    console.log(`Fetching vessel data for IMO: ${imo}`);
     const url = `https://www.vesselfinder.com/vessels/details/${imo}`;
     
     const html = await fetchVesselPage(url);
@@ -221,11 +165,11 @@ app.get('/api/vessel/:imo', async (req, res) => {
       });
     }
     
-    console.log(`✓ Successfully fetched data for ${vesselData.name}\n`);
+    console.log(`Successfully fetched data for ${vesselData.name}`);
     res.json(vesselData);
     
   } catch (error) {
-    console.error('Error in /api/vessel/:imo:', error.message);
+    console.error('Error:', error.message);
     res.status(500).json({ 
       error: 'Server error',
       message: 'An error occurred while fetching vessel details.'
@@ -233,12 +177,10 @@ app.get('/api/vessel/:imo', async (req, res) => {
   }
 });
 
-// Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Vessel API is running' });
 });
 
-// Root endpoint
 app.get('/', (req, res) => {
   res.json({ 
     message: 'Marine Analytics Vessel API',
@@ -250,12 +192,11 @@ app.get('/', (req, res) => {
   });
 });
 
-// Start server
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-  console.log(`\n🚢 Vessel API server running on port ${PORT}`);
+  console.log(`Vessel API server running on port ${PORT}`);
   console.log(`Health check: http://localhost:${PORT}/api/health`);
-  console.log(`Example: http://localhost:${PORT}/api/vessel/1002756\n`);
+  console.log(`Example: http://localhost:${PORT}/api/vessel/1002756`);
 });
 
 module.exports = app;
