@@ -1,0 +1,433 @@
+import React, { useState } from 'react';
+import { Ship, Search, Plus, LogOut, User, Lock, Building2, Anchor } from 'lucide-react';
+
+export default function App() {
+  const [currentPage, setCurrentPage] = useState('login');
+  const [users, setUsers] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [vessels, setVessels] = useState({});
+  
+  const [loginForm, setLoginForm] = useState({ email: '', password: '' });
+  const [registerForm, setRegisterForm] = useState({
+    companyName: '',
+    email: '',
+    password: '',
+    confirmPassword: ''
+  });
+  const [imoSearch, setImoSearch] = useState('');
+  const [searchResult, setSearchResult] = useState(null);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const mockIMODatabase = {
+    '9123456': { name: 'Pacific Voyager', type: 'Container Ship', dwt: 50000, flag: 'Panama' },
+    '9234567': { name: 'Atlantic Star', type: 'Bulk Carrier', dwt: 75000, flag: 'Liberia' },
+    '9345678': { name: 'Mediterranean Queen', type: 'Tanker', dwt: 100000, flag: 'Malta' },
+    '9456789': { name: 'Arctic Explorer', type: 'Research Vessel', dwt: 12000, flag: 'Norway' },
+    '9567890': { name: 'Indian Ocean Spirit', type: 'Container Ship', dwt: 85000, flag: 'Singapore' }
+  };
+
+  const handleRegister = () => {
+    setError('');
+    setSuccess('');
+
+    if (registerForm.password !== registerForm.confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    if (registerForm.password.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+
+    if (users.find(u => u.email === registerForm.email)) {
+      setError('Email already registered');
+      return;
+    }
+
+    const newUser = {
+      id: Date.now(),
+      companyName: registerForm.companyName,
+      email: registerForm.email,
+      password: registerForm.password
+    };
+
+    setUsers([...users, newUser]);
+    setVessels({ ...vessels, [newUser.id]: [] });
+    setSuccess('Registration successful! Please login.');
+    setRegisterForm({ companyName: '', email: '', password: '', confirmPassword: '' });
+    
+    setTimeout(() => {
+      setCurrentPage('login');
+      setSuccess('');
+    }, 2000);
+  };
+
+  const handleLogin = () => {
+    setError('');
+
+    const user = users.find(u => u.email === loginForm.email && u.password === loginForm.password);
+    
+    if (user) {
+      setCurrentUser(user);
+      setCurrentPage('dashboard');
+      setLoginForm({ email: '', password: '' });
+    } else {
+      setError('Invalid email or password');
+    }
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setCurrentPage('login');
+    setImoSearch('');
+    setSearchResult(null);
+  };
+
+  const handleIMOSearch = () => {
+    setError('');
+    
+    const vessel = mockIMODatabase[imoSearch];
+    if (vessel) {
+      setSearchResult({ imo: imoSearch, ...vessel });
+    } else {
+      setError('Vessel not found. Try IMO: 9123456, 9234567, 9345678, 9456789, or 9567890');
+      setSearchResult(null);
+    }
+  };
+
+  const handleAddVessel = () => {
+    if (!searchResult) return;
+
+    const userVessels = vessels[currentUser.id] || [];
+    
+    if (userVessels.find(v => v.imo === searchResult.imo)) {
+      setError('Vessel already added to your fleet');
+      return;
+    }
+
+    const updatedVessels = {
+      ...vessels,
+      [currentUser.id]: [...userVessels, { ...searchResult, addedDate: new Date().toISOString() }]
+    };
+    
+    setVessels(updatedVessels);
+    setSuccess('Vessel added successfully!');
+    setImoSearch('');
+    setSearchResult(null);
+    
+    setTimeout(() => setSuccess(''), 3000);
+  };
+
+  const handleKeyPress = (e, action) => {
+    if (e.key === 'Enter') {
+      action();
+    }
+  };
+
+  const renderAuth = () => (
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-cyan-900 flex items-center justify-center p-4">
+      <div className="absolute inset-0 opacity-20"></div>
+      
+      <div className="w-full max-w-md relative z-10">
+        <div className="text-center mb-8">
+          <div className="flex justify-center mb-4">
+            <div className="bg-cyan-500 p-4 rounded-full">
+              <Anchor className="w-12 h-12 text-white" />
+            </div>
+          </div>
+          <h1 className="text-4xl font-bold text-white mb-2">Marine Analytics</h1>
+          <p className="text-cyan-200">Intelligent Shipping Management</p>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+          <div className="flex border-b">
+            <button
+              onClick={() => setCurrentPage('login')}
+              className={`flex-1 py-4 font-semibold transition-colors ${
+                currentPage === 'login' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              Login
+            </button>
+            <button
+              onClick={() => setCurrentPage('register')}
+              className={`flex-1 py-4 font-semibold transition-colors ${
+                currentPage === 'register' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              Register
+            </button>
+          </div>
+
+          <div className="p-8">
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+            {success && (
+              <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">
+                {success}
+              </div>
+            )}
+
+            {currentPage === 'login' ? (
+              <div className="space-y-5">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <input
+                      type="email"
+                      value={loginForm.email}
+                      onChange={(e) => setLoginForm({...loginForm, email: e.target.value})}
+                      onKeyPress={(e) => handleKeyPress(e, handleLogin)}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="your@email.com"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <input
+                      type="password"
+                      value={loginForm.password}
+                      onChange={(e) => setLoginForm({...loginForm, password: e.target.value})}
+                      onKeyPress={(e) => handleKeyPress(e, handleLogin)}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="••••••••"
+                    />
+                  </div>
+                </div>
+                <button
+                  onClick={handleLogin}
+                  className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-lg"
+                >
+                  Sign In
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-5">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Company Name</label>
+                  <div className="relative">
+                    <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <input
+                      type="text"
+                      value={registerForm.companyName}
+                      onChange={(e) => setRegisterForm({...registerForm, companyName: e.target.value})}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Your Shipping Company"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <input
+                      type="email"
+                      value={registerForm.email}
+                      onChange={(e) => setRegisterForm({...registerForm, email: e.target.value})}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="your@email.com"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <input
+                      type="password"
+                      value={registerForm.password}
+                      onChange={(e) => setRegisterForm({...registerForm, password: e.target.value})}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="••••••••"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <input
+                      type="password"
+                      value={registerForm.confirmPassword}
+                      onChange={(e) => setRegisterForm({...registerForm, confirmPassword: e.target.value})}
+                      onKeyPress={(e) => handleKeyPress(e, handleRegister)}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="••••••••"
+                    />
+                  </div>
+                </div>
+                <button
+                  onClick={handleRegister}
+                  className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-lg"
+                >
+                  Register Company
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderDashboard = () => {
+    const userVessels = vessels[currentUser.id] || [];
+
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <nav className="bg-white shadow-md">
+          <div className="max-w-7xl mx-auto px-6 py-4">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center space-x-3">
+                <Anchor className="w-8 h-8 text-blue-600" />
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-800">Marine Analytics</h1>
+                  <p className="text-sm text-gray-600">{currentUser.companyName}</p>
+                </div>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Logout</span>
+              </button>
+            </div>
+          </div>
+        </nav>
+
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+              <Plus className="w-6 h-6 mr-2 text-blue-600" />
+              Add New Vessel
+            </h2>
+
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+            {success && (
+              <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">
+                {success}
+              </div>
+            )}
+
+            <div className="mb-6">
+              <div className="flex gap-3">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    type="text"
+                    value={imoSearch}
+                    onChange={(e) => setImoSearch(e.target.value)}
+                    onKeyPress={(e) => handleKeyPress(e, handleIMOSearch)}
+                    placeholder="Enter IMO Number (e.g., 9123456)"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <button
+                  onClick={handleIMOSearch}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                >
+                  Search
+                </button>
+              </div>
+            </div>
+
+            {searchResult && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-800">{searchResult.name}</h3>
+                    <p className="text-gray-600">IMO: {searchResult.imo}</p>
+                  </div>
+                  <button
+                    onClick={handleAddVessel}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold"
+                  >
+                    Add to Fleet
+                  </button>
+                </div>
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600">Type:</span>
+                    <p className="font-semibold text-gray-800">{searchResult.type}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">DWT:</span>
+                    <p className="font-semibold text-gray-800">{searchResult.dwt.toLocaleString()} tons</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Flag:</span>
+                    <p className="font-semibold text-gray-800">{searchResult.flag}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+              <Ship className="w-6 h-6 mr-2 text-blue-600" />
+              My Fleet ({userVessels.length})
+            </h2>
+
+            {userVessels.length === 0 ? (
+              <div className="text-center py-12">
+                <Ship className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500 text-lg">No vessels added yet</p>
+                <p className="text-gray-400 text-sm">Search and add vessels using the form above</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {userVessels.map((vessel, index) => (
+                  <div key={index} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between mb-3">
+                      <Ship className="w-8 h-8 text-blue-600" />
+                      <span className="text-xs text-gray-500">
+                        Added {new Date(vessel.addedDate).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <h3 className="font-bold text-lg text-gray-800 mb-1">{vessel.name}</h3>
+                    <p className="text-sm text-gray-600 mb-3">IMO: {vessel.imo}</p>
+                    <div className="space-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Type:</span>
+                        <span className="font-medium text-gray-800">{vessel.type}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">DWT:</span>
+                        <span className="font-medium text-gray-800">{vessel.dwt.toLocaleString()} t</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Flag:</span>
+                        <span className="font-medium text-gray-800">{vessel.flag}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return currentUser ? renderDashboard() : renderAuth();
+}
