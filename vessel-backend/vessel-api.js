@@ -47,6 +47,54 @@ async function fetchVesselPage(url, maxRetries = 5) {
   return null;
 }
 
+// New function to fetch actual image URL from ship-photos page
+async function fetchShipPhotoUrl(shipPhotosPageUrl) {
+  try {
+    console.log(`Fetching ship photo from: ${shipPhotosPageUrl}`);
+    const html = await fetchVesselPage(shipPhotosPageUrl);
+    
+    if (!html) return null;
+    
+    const $ = cheerio.load(html);
+    
+    // Look for the actual image URL in the ship-photos page
+    const possibleSelectors = [
+      'img.ship-photo',
+      'img[src*="ship-photo"]',
+      'img[src*="static.vesselfinder"]',
+      '.photo-container img',
+      '#ship-photo img',
+      'img[itemprop="image"]'
+    ];
+    
+    for (const selector of possibleSelectors) {
+      const imgSrc = $(selector).first().attr('src');
+      if (imgSrc && !imgSrc.includes('logo') && !imgSrc.includes('placeholder')) {
+        const fullUrl = imgSrc.startsWith('http') ? imgSrc : `https://www.vesselfinder.com${imgSrc}`;
+        console.log(`Found image URL: ${fullUrl}`);
+        return fullUrl;
+      }
+    }
+    
+    // Fallback: look for any img tag with large dimensions
+    const allImages = $('img');
+    for (let i = 0; i < allImages.length; i++) {
+      const imgSrc = $(allImages[i]).attr('src');
+      if (imgSrc && imgSrc.includes('static.vesselfinder') && !imgSrc.includes('logo')) {
+        const fullUrl = imgSrc.startsWith('http') ? imgSrc : `https://www.vesselfinder.com${imgSrc}`;
+        console.log(`Found fallback image URL: ${fullUrl}`);
+        return fullUrl;
+      }
+    }
+    
+    console.log('No image found on ship-photos page');
+    return null;
+  } catch (error) {
+    console.error('Error fetching ship photo:', error.message);
+    return null;
+  }
+}
+
 function parseVesselDetails(html, imo) {
   const $ = cheerio.load(html);
   
@@ -66,6 +114,7 @@ function parseVesselDetails(html, imo) {
     beam: 'N/A',
     grossTonnage: 'N/A',
     image: null,
+    shipPhotosUrl: null,
     allData: {}
   };
   
@@ -101,34 +150,15 @@ function parseVesselDetails(html, imo) {
     });
   });
   
-  let imageUrl = null;
-  
+  // Find ship-photos link
   const shipPhotosLink = $('a[href*="/ship-photos/"]').first().attr('href');
   if (shipPhotosLink) {
-    const fullPhotoUrl = shipPhotosLink.startsWith('http') ? shipPhotosLink : `https://www.vesselfinder.com${shipPhotosLink}`;
-    imageUrl = fullPhotoUrl;
+    vesselData.shipPhotosUrl = shipPhotosLink.startsWith('http') 
+      ? shipPhotosLink 
+      : `https://www.vesselfinder.com${shipPhotosLink}`;
   }
   
-  if (!imageUrl) {
-    const imgSelectors = [
-      'img[src*="ship-photo"]:not([src*="logo"])',
-      'img[src*="static.vesselfinder.net/ship-photo"]',
-      '.vessel-image img:not([src*="logo"])',
-      '#vessel-photo img:not([src*="logo"])'
-    ];
-    
-    for (const selector of imgSelectors) {
-      const imgSrc = $(selector).first().attr('src');
-      if (imgSrc && !imgSrc.includes('logo')) {
-        imageUrl = imgSrc.startsWith('http') ? imgSrc : `https://www.vesselfinder.com${imgSrc}`;
-        break;
-      }
-    }
-  }
-  
-  vesselData.image = imageUrl;
-  
-  console.log(`Parsed: ${vesselData.name}, Image: ${imageUrl ? 'Found' : 'Not found'}`);
+  console.log(`Parsed: ${vesselData.name}, Ship Photos URL: ${vesselData.shipPhotosUrl}`);
   
   return vesselData;
 }
@@ -144,7 +174,7 @@ app.get('/api/vessel/:imo', async (req, res) => {
       });
     }
     
-    console.log(`Fetching vessel data for IMO: ${imo}`);
+    console.log(`\nFetching vessel data for IMO: ${imo}`);
     const url = `https://www.vesselfinder.com/vessels/details/${imo}`;
     
     const html = await fetchVesselPage(url);
@@ -165,7 +195,17 @@ app.get('/api/vessel/:imo', async (req, res) => {
       });
     }
     
-    console.log(`Successfully fetched data for ${vesselData.name}`);
+    // Fetch actual image URL if ship-photos page found
+    if (vesselData.shipPhotosUrl) {
+      const imageUrl = await fetchShipPhotoUrl(vesselData.shipPhotosUrl);
+      if (imageUrl) {
+        vesselData.image = imageUrl;
+      }
+    }
+    
+    console.log(`✓ Successfully fetched data for ${vesselData.name}`);
+    console.log(`  Image URL: ${vesselData.image || 'Not found'}\n`);
+    
     res.json(vesselData);
     
   } catch (error) {
@@ -194,9 +234,9 @@ app.get('/', (req, res) => {
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-  console.log(`Vessel API server running on port ${PORT}`);
+  console.log(`\nVessel API server running on port ${PORT}`);
   console.log(`Health check: http://localhost:${PORT}/api/health`);
-  console.log(`Example: http://localhost:${PORT}/api/vessel/1002756`);
+  console.log(`Example: http://localhost:${PORT}/api/vessel/9987196\n`);
 });
 
 module.exports = app;
