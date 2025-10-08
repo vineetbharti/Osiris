@@ -1,0 +1,822 @@
+=================================================================
+MARINE ANALYTICS - ALL REMAINING COMPONENT FILES
+Copy each section into the specified file path
+=================================================================
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: src/components/dashboard/VesselSearchSection.js
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+import React from 'react';
+import { Plus } from 'lucide-react';
+import VesselSearchResult from './VesselSearchResult';
+import { Search } from 'lucide-react';
+
+const VesselSearchSection = ({
+  imoSearch,
+  setImoSearch,
+  searchResult,
+  error,
+  success,
+  isSearching,
+  handleIMOSearch,
+  handleAddVessel,
+  handleKeyPress
+}) => {
+  return (
+    <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+      <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+        <Plus className="w-6 h-6 mr-2 text-blue-600" />
+        Add New Vessel
+      </h2>
+
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
+      {success && (
+        <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">
+          {success}
+        </div>
+      )}
+
+      <div className="mb-6">
+        <div className="flex gap-3">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input
+              type="text"
+              value={imoSearch}
+              onChange={(e) => setImoSearch(e.target.value)}
+              onKeyPress={(e) => handleKeyPress(e, handleIMOSearch)}
+              placeholder="Enter IMO Number (e.g., 9739368)"
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          <button
+            onClick={handleIMOSearch}
+            disabled={isSearching}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+          >
+            {isSearching ? 'Searching...' : 'Search'}
+          </button>
+        </div>
+      </div>
+
+      {searchResult && (
+        <VesselSearchResult 
+          searchResult={searchResult}
+          handleAddVessel={handleAddVessel}
+        />
+      )}
+    </div>
+  );
+};
+
+export default VesselSearchSection;
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: src/components/dashboard/VesselSearchResult.js
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+import React from 'react';
+
+const VesselSearchResult = ({ searchResult, handleAddVessel }) => {
+  return (
+    <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+      <div className="flex flex-col md:flex-row gap-6">
+        {searchResult.image && (
+          <div className="md:w-64 flex-shrink-0">
+            <img 
+              src={searchResult.image} 
+              alt={searchResult.name}
+              className="w-full h-48 object-cover rounded-lg shadow-md"
+              onError={(e) => {
+                e.target.style.display = 'none';
+              }}
+            />
+          </div>
+        )}
+        <div className="flex-1">
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <h3 className="text-xl font-bold text-gray-800">{searchResult.name}</h3>
+              <p className="text-gray-600 text-sm">
+                IMO: {searchResult.imo} 
+                {searchResult.mmsi !== 'N/A' && ` | MMSI: ${searchResult.mmsi}`}
+              </p>
+            </div>
+            <button
+              onClick={handleAddVessel}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold whitespace-nowrap shadow-md"
+            >
+              Add to Fleet
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <span className="text-gray-600">Type:</span>
+              <p className="font-semibold text-gray-800">{searchResult.type}</p>
+            </div>
+            <div>
+              <span className="text-gray-600">Flag:</span>
+              <p className="font-semibold text-gray-800">{searchResult.flag}</p>
+            </div>
+            <div>
+              <span className="text-gray-600">Length:</span>
+              <p className="font-semibold text-gray-800">{searchResult.length}</p>
+            </div>
+            <div>
+              <span className="text-gray-600">Beam:</span>
+              <p className="font-semibold text-gray-800">{searchResult.beam}</p>
+            </div>
+            <div className="col-span-2">
+              <span className="text-gray-600">Gross Tonnage:</span>
+              <p className="font-semibold text-gray-800">{searchResult.grossTonnage}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default VesselSearchResult;
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: src/components/dashboard/FleetSection.js
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+import React from 'react';
+import { Ship, Search } from 'lucide-react';
+import VesselGrid from './VesselGrid';
+import EmptyState from '../common/EmptyState';
+
+const FleetSection = ({
+  userVessels,
+  filteredVessels,
+  fleetSearch,
+  setFleetSearch,
+  handleVesselClick
+}) => {
+  return (
+    <div className="bg-white rounded-xl shadow-lg p-6">
+      <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+        <Ship className="w-6 h-6 mr-2 text-blue-600" />
+        My Fleet ({userVessels.length})
+      </h2>
+
+      {userVessels.length > 0 && (
+        <div className="mb-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input
+              type="text"
+              value={fleetSearch}
+              onChange={(e) => setFleetSearch(e.target.value)}
+              placeholder="Search by vessel name, IMO, type, or flag..."
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          {fleetSearch && (
+            <p className="text-sm text-gray-600 mt-2">
+              Showing {filteredVessels.length} of {userVessels.length} vessels
+            </p>
+          )}
+        </div>
+      )}
+
+      {userVessels.length === 0 ? (
+        <EmptyState 
+          icon={Ship}
+          title="No vessels added yet"
+          subtitle="Search and add vessels using the form above"
+        />
+      ) : filteredVessels.length === 0 ? (
+        <EmptyState 
+          icon={Search}
+          title="No vessels match your search"
+          subtitle="Try different keywords"
+        />
+      ) : (
+        <VesselGrid vessels={filteredVessels} onVesselClick={handleVesselClick} />
+      )}
+    </div>
+  );
+};
+
+export default FleetSection;
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: src/components/dashboard/VesselGrid.js
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+import React from 'react';
+import VesselCard from './VesselCard';
+
+const VesselGrid = ({ vessels, onVesselClick }) => {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {vessels.map((vessel, index) => (
+        <VesselCard 
+          key={index} 
+          vessel={vessel} 
+          onClick={() => onVesselClick(vessel)}
+        />
+      ))}
+    </div>
+  );
+};
+
+export default VesselGrid;
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: src/components/dashboard/VesselCard.js
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+import React from 'react';
+import { Ship } from 'lucide-react';
+
+const VesselCard = ({ vessel, onClick }) => {
+  return (
+    <div 
+      className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow bg-white cursor-pointer"
+      onClick={onClick}
+    >
+      {vessel.image && (
+        <div className="mb-3 overflow-hidden rounded-lg bg-gray-100">
+          <img 
+            src={vessel.image} 
+            alt={vessel.name}
+            className="w-full h-40 object-cover hover:scale-105 transition-transform duration-300"
+            onError={(e) => {
+              e.target.style.display = 'none';
+            }}
+          />
+        </div>
+      )}
+      <div className="flex items-start justify-between mb-3">
+        <Ship className="w-6 h-6 text-blue-600 flex-shrink-0" />
+        <span className="text-xs text-gray-500">
+          {new Date(vessel.addedDate).toLocaleDateString()}
+        </span>
+      </div>
+      <h3 className="font-bold text-lg text-gray-800 mb-1 line-clamp-1">{vessel.name}</h3>
+      <p className="text-sm text-gray-600 mb-3">IMO: {vessel.imo}</p>
+      <div className="space-y-1 text-sm">
+        <div className="flex justify-between">
+          <span className="text-gray-600">Type:</span>
+          <span className="font-medium text-gray-800 text-right truncate ml-2">{vessel.type}</span>
+        </div>
+        {vessel.length && vessel.length !== 'N/A' && (
+          <div className="flex justify-between">
+            <span className="text-gray-600">Length:</span>
+            <span className="font-medium text-gray-800">{vessel.length}</span>
+          </div>
+        )}
+        <div className="flex justify-between">
+          <span className="text-gray-600">Flag:</span>
+          <span className="font-medium text-gray-800 text-right truncate ml-2">{vessel.flag}</span>
+        </div>
+        {vessel.grossTonnage && vessel.grossTonnage !== 'N/A' && (
+          <div className="flex justify-between">
+            <span className="text-gray-600">GT:</span>
+            <span className="font-medium text-gray-800">{vessel.grossTonnage}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default VesselCard;
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: src/components/common/EmptyState.js
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+import React from 'react';
+
+const EmptyState = ({ icon: Icon, title, subtitle }) => {
+  return (
+    <div className="text-center py-12">
+      <Icon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+      <p className="text-gray-500 text-lg">{title}</p>
+      <p className="text-gray-400 text-sm">{subtitle}</p>
+    </div>
+  );
+};
+
+export default EmptyState;
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: src/components/common/Navigation.js
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+import React from 'react';
+import { LogOut } from 'lucide-react';
+
+const Navigation = ({ title, subtitle, icon: Icon, onLogout }) => {
+  return (
+    <nav className="bg-white shadow-md">
+      <div className="max-w-7xl mx-auto px-6 py-4">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center space-x-3">
+            {Icon && <Icon className="w-8 h-8 text-blue-600" />}
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">{title}</h1>
+              {subtitle && <p className="text-sm text-gray-600">{subtitle}</p>}
+            </div>
+          </div>
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Logout</span>
+            </button>
+          )}
+        </div>
+      </div>
+    </nav>
+  );
+};
+
+export default Navigation;
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: src/components/vessel-detail/VesselDetailPage.js
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+import React, { useState, useEffect, useRef } from 'react';
+import VesselDetailNav from './VesselDetailNav';
+import VesselWidgets from './VesselWidgets';
+import CesiumMapPanel from './CesiumMapPanel';
+import HistoricalTripsSection from './HistoricalTripsSection';
+import { mockCurrentJourney, mockHistoricalTrips } from '../../utils/mockData';
+import { initializeCesiumViewer, plotRouteOnMap, destroyCesiumViewer } from '../../utils/cesiumHelper';
+
+const VesselDetailPage = ({ 
+  selectedVessel, 
+  handleBackToFleet, 
+  handleLogout,
+  cesiumViewerRef 
+}) => {
+  const [activeWidget, setActiveWidget] = useState('current');
+  const [showHistoricalTrips, setShowHistoricalTrips] = useState(false);
+  const [selectedRoute, setSelectedRoute] = useState(null);
+  const cesiumContainerRef = useRef(null);
+
+  // Plot route on Cesium map
+  const plotRoute = (route, color = '#FF0000', isCurrentJourney = false) => {
+    if (cesiumViewerRef.current) {
+      plotRouteOnMap(cesiumViewerRef.current, route, color, isCurrentJourney);
+    }
+  };
+
+  // Handle viewing current journey
+  const handleViewCurrentJourney = () => {
+    setSelectedRoute('current');
+    plotRoute(mockCurrentJourney.route, '#0066FF', true);
+  };
+
+  // Handle viewing historical trip
+  const handleViewHistoricalTrip = (trip) => {
+    setSelectedRoute(trip.id);
+    setShowHistoricalTrips(false);
+    plotRoute(trip.route, '#9333EA');
+  };
+
+  // Initialize CesiumJS
+  useEffect(() => {
+    if (cesiumContainerRef.current && !cesiumViewerRef.current) {
+      const viewer = initializeCesiumViewer(cesiumContainerRef.current);
+      if (viewer) {
+        cesiumViewerRef.current = viewer;
+        // Plot initial current journey route
+        plotRoute(mockCurrentJourney.route, '#0066FF', true);
+      }
+    }
+
+    return () => {
+      if (cesiumViewerRef.current) {
+        destroyCesiumViewer(cesiumViewerRef.current);
+        cesiumViewerRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <VesselDetailNav 
+        selectedVessel={selectedVessel}
+        handleBackToFleet={handleBackToFleet}
+        handleLogout={handleLogout}
+      />
+
+      <div className="max-w-7xl mx-auto px-6 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Left Panel - Widgets */}
+          <VesselWidgets
+            selectedVessel={selectedVessel}
+            activeWidget={activeWidget}
+            setActiveWidget={setActiveWidget}
+            setShowHistoricalTrips={setShowHistoricalTrips}
+            mockCurrentJourney={mockCurrentJourney}
+            mockHistoricalTrips={mockHistoricalTrips}
+            handleViewCurrentJourney={handleViewCurrentJourney}
+            selectedRoute={selectedRoute}
+          />
+
+          {/* Right Panel - Cesium Map */}
+          <CesiumMapPanel cesiumContainerRef={cesiumContainerRef} />
+        </div>
+
+        {/* Historical Trips Section */}
+        {showHistoricalTrips && (
+          <HistoricalTripsSection 
+            mockHistoricalTrips={mockHistoricalTrips}
+            setShowHistoricalTrips={setShowHistoricalTrips}
+            handleViewHistoricalTrip={handleViewHistoricalTrip}
+          />
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default VesselDetailPage;
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: src/components/vessel-detail/VesselDetailNav.js
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+import React from 'react';
+import { Ship, ArrowLeft, LogOut } from 'lucide-react';
+
+const VesselDetailNav = ({ selectedVessel, handleBackToFleet, handleLogout }) => {
+  return (
+    <nav className="bg-white shadow-md">
+      <div className="max-w-7xl mx-auto px-6 py-4">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={handleBackToFleet}
+              className="flex items-center space-x-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to Fleet</span>
+            </button>
+            <div className="flex items-center space-x-3">
+              <Ship className="w-8 h-8 text-blue-600" />
+              <div>
+                <h1 className="text-2xl font-bold text-gray-800">{selectedVessel.name}</h1>
+                <p className="text-sm text-gray-600">IMO: {selectedVessel.imo}</p>
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Logout</span>
+          </button>
+        </div>
+      </div>
+    </nav>
+  );
+};
+
+export default VesselDetailNav;
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: src/components/vessel-detail/VesselWidgets.js
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+import React from 'react';
+import CurrentJourneyWidget from './CurrentJourneyWidget';
+import HistoricalTripsWidget from './HistoricalTripsWidget';
+import VesselInfoWidget from './VesselInfoWidget';
+
+const VesselWidgets = ({
+  selectedVessel,
+  activeWidget,
+  setActiveWidget,
+  setShowHistoricalTrips,
+  mockCurrentJourney,
+  mockHistoricalTrips,
+  handleViewCurrentJourney,
+  selectedRoute
+}) => {
+  return (
+    <div className="lg:col-span-1 space-y-4">
+      <CurrentJourneyWidget
+        activeWidget={activeWidget}
+        setActiveWidget={setActiveWidget}
+        mockCurrentJourney={mockCurrentJourney}
+        handleViewCurrentJourney={handleViewCurrentJourney}
+        selectedRoute={selectedRoute}
+      />
+
+      <HistoricalTripsWidget
+        activeWidget={activeWidget}
+        setActiveWidget={setActiveWidget}
+        setShowHistoricalTrips={setShowHistoricalTrips}
+        mockHistoricalTrips={mockHistoricalTrips}
+      />
+
+      <VesselInfoWidget selectedVessel={selectedVessel} />
+    </div>
+  );
+};
+
+export default VesselWidgets;
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: src/components/vessel-detail/CurrentJourneyWidget.js
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+import React from 'react';
+import { Navigation } from 'lucide-react';
+
+const CurrentJourneyWidget = ({ 
+  activeWidget, 
+  setActiveWidget, 
+  mockCurrentJourney, 
+  handleViewCurrentJourney, 
+  selectedRoute 
+}) => {
+  return (
+    <div 
+      className={`bg-white rounded-xl shadow-lg p-5 cursor-pointer transition-all ${
+        activeWidget === 'current' ? 'ring-2 ring-blue-500' : ''
+      }`}
+      onClick={() => setActiveWidget('current')}
+    >
+      <div className="flex items-center space-x-3 mb-4">
+        <div className="bg-blue-100 p-2 rounded-lg">
+          <Navigation className="w-6 h-6 text-blue-600" />
+        </div>
+        <h3 className="font-bold text-gray-800">Current Journey</h3>
+      </div>
+      <div className="space-y-2 text-sm">
+        <div>
+          <span className="text-gray-600">From:</span>
+          <p className="font-semibold text-gray-800">{mockCurrentJourney.from}</p>
+        </div>
+        <div>
+          <span className="text-gray-600">To:</span>
+          <p className="font-semibold text-gray-800">{mockCurrentJourney.to}</p>
+        </div>
+        <div>
+          <span className="text-gray-600">Status:</span>
+          <p className="font-semibold text-green-600">{mockCurrentJourney.status}</p>
+        </div>
+        <div>
+          <span className="text-gray-600">Speed:</span>
+          <p className="font-semibold text-gray-800">{mockCurrentJourney.speed}</p>
+        </div>
+        <div>
+          <span className="text-gray-600">ETA:</span>
+          <p className="font-semibold text-gray-800">{mockCurrentJourney.eta}</p>
+        </div>
+      </div>
+      <button 
+        onClick={(e) => {
+          e.stopPropagation();
+          handleViewCurrentJourney();
+        }}
+        className={`w-full mt-4 px-4 py-2 rounded-lg transition-colors text-sm font-semibold ${
+          selectedRoute === 'current'
+            ? 'bg-green-600 text-white hover:bg-green-700'
+            : 'bg-blue-600 text-white hover:bg-blue-700'
+        }`}
+      >
+        {selectedRoute === 'current' ? '✓ Route Displayed' : 'View Voyage'}
+      </button>
+    </div>
+  );
+};
+
+export default CurrentJourneyWidget;
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: src/components/vessel-detail/HistoricalTripsWidget.js
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+import React from 'react';
+import { Clock } from 'lucide-react';
+
+const HistoricalTripsWidget = ({ 
+  activeWidget, 
+  setActiveWidget, 
+  setShowHistoricalTrips, 
+  mockHistoricalTrips 
+}) => {
+  return (
+    <div 
+      className={`bg-white rounded-xl shadow-lg p-5 cursor-pointer transition-all ${
+        activeWidget === 'historical' ? 'ring-2 ring-blue-500' : ''
+      }`}
+      onClick={() => {
+        setActiveWidget('historical');
+        setShowHistoricalTrips(true);
+      }}
+    >
+      <div className="flex items-center space-x-3 mb-4">
+        <div className="bg-purple-100 p-2 rounded-lg">
+          <Clock className="w-6 h-6 text-purple-600" />
+        </div>
+        <h3 className="font-bold text-gray-800">Historical Trips</h3>
+      </div>
+      <div className="text-center py-2">
+        <p className="text-3xl font-bold text-purple-600">{mockHistoricalTrips.length}</p>
+        <p className="text-sm text-gray-600">Past Voyages</p>
+      </div>
+      <button className="w-full mt-3 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-semibold">
+        View All
+      </button>
+    </div>
+  );
+};
+
+export default HistoricalTripsWidget;
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: src/components/vessel-detail/VesselInfoWidget.js
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+import React from 'react';
+import { MapPin } from 'lucide-react';
+
+const VesselInfoWidget = ({ selectedVessel }) => {
+  return (
+    <div className="bg-white rounded-xl shadow-lg p-5">
+      <div className="flex items-center space-x-3 mb-4">
+        <div className="bg-cyan-100 p-2 rounded-lg">
+          <MapPin className="w-6 h-6 text-cyan-600" />
+        </div>
+        <h3 className="font-bold text-gray-800">Vessel Info</h3>
+      </div>
+      <div className="space-y-2 text-sm">
+        <div>
+          <span className="text-gray-600">Type:</span>
+          <p className="font-semibold text-gray-800">{selectedVessel.type}</p>
+        </div>
+        <div>
+          <span className="text-gray-600">Flag:</span>
+          <p className="font-semibold text-gray-800">{selectedVessel.flag}</p>
+        </div>
+        {selectedVessel.length && selectedVessel.length !== 'N/A' && (
+          <div>
+            <span className="text-gray-600">Length:</span>
+            <p className="font-semibold text-gray-800">{selectedVessel.length}</p>
+          </div>
+        )}
+        {selectedVessel.grossTonnage && selectedVessel.grossTonnage !== 'N/A' && (
+          <div>
+            <span className="text-gray-600">Gross Tonnage:</span>
+            <p className="font-semibold text-gray-800">{selectedVessel.grossTonnage}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default VesselInfoWidget;
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: src/components/vessel-detail/CesiumMapPanel.js
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+import React from 'react';
+import { MapPin } from 'lucide-react';
+
+const CesiumMapPanel = ({ cesiumContainerRef }) => {
+  return (
+    <div className="lg:col-span-3">
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div className="bg-gradient-to-r from-blue-600 to-cyan-600 px-6 py-4">
+          <h2 className="text-xl font-bold text-white flex items-center">
+            <MapPin className="w-5 h-5 mr-2" />
+            Live Tracking Map
+          </h2>
+          <p className="text-blue-100 text-sm">Real-time vessel position and route visualization</p>
+        </div>
+        <div 
+          ref={cesiumContainerRef}
+          className="w-full h-[600px] bg-gray-900"
+          style={{ position: 'relative' }}
+        >
+          {typeof window.Cesium === 'undefined' && (
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-800 text-white">
+              <div className="text-center">
+                <MapPin className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                <p className="text-lg font-semibold mb-2">CesiumJS Not Loaded</p>
+                <p className="text-sm text-gray-400">Please include Cesium library to view the map</p>
+                <p className="text-xs text-gray-500 mt-4">
+                  Add Cesium script tag to your HTML head section
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CesiumMapPanel;
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: src/components/vessel-detail/HistoricalTripsSection.js
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+import React from 'react';
+import { Clock } from 'lucide-react';
+import HistoricalTripCard from './HistoricalTripCard';
+
+const HistoricalTripsSection = ({ mockHistoricalTrips, setShowHistoricalTrips, handleViewHistoricalTrip }) => {
+  return (
+    <div className="mt-6 bg-white rounded-xl shadow-lg p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-800 flex items-center">
+          <Clock className="w-6 h-6 mr-2 text-purple-600" />
+          Historical Voyages
+        </h2>
+        <button
+          onClick={() => setShowHistoricalTrips(false)}
+          className="text-gray-500 hover:text-gray-700 font-semibold"
+        >
+          Close
+        </button>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {mockHistoricalTrips.map((trip) => (
+          <HistoricalTripCard key={trip.id} trip={trip} onViewRoute={handleViewHistoricalTrip} />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default HistoricalTripsSection;
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE: src/components/vessel-detail/HistoricalTripCard.js
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+import React from 'react';
+
+const HistoricalTripCard = ({ trip, onViewRoute }) => {
+  return (
+    <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex-1">
+          <div className="flex items-center space-x-2 mb-2">
+            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+            <span className="font-semibold text-gray-800">{trip.from}</span>
+          </div>
+          <div className="pl-5 border-l-2 border-gray-300 my-2 py-1">
+            <span className="text-sm text-gray-500">{trip.duration}</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+            <span className="font-semibold text-gray-800">{trip.to}</span>
+          </div>
+        </div>
+        <div className="text-right">
+          <span className="text-xs text-gray-500">{trip.date}</span>
+        </div>
+      </div>
+      <button 
+        onClick={() => onViewRoute(trip)}
+        className="w-full mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-semibold"
+      >
+        View Route
+      </button>
+    </div>
+  );
+};
+
+export default HistoricalTripCard;
+
+=================================================================
+END OF ALL COMPONENT FILES
+=================================================================
+
+TOTAL FILES PROVIDED: 25
+✅ All components are now complete!
+
+Next steps:
+1. Copy each file into its respective path
+2. Run: npm install
+3. Run: npm start
+4. Enjoy your modular Marine Analytics app!
+
+=================================================================
