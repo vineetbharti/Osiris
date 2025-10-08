@@ -4,8 +4,32 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000000" />
-    <meta name="description" content="Marine Analytics Platform" />
-    <title>Marine Analytics Platform</title>
+    <meta
+      name="description"
+      content="Marine Analytics - Intelligent Shipping Management System"
+    />
+    <title>Marine Analytics - Vessel Tracking</title>
+    
+    <!-- CesiumJS Library - REQUIRED for 3D Map -->
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.109/Build/Cesium/Cesium.js"></script>
+    <link href="https://cesium.com/downloads/cesiumjs/releases/1.109/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+      /* Hide Cesium bottom credit bar */
+      .cesium-viewer .cesium-viewer-bottom {
+        display: none;
+      }
+      
+      /* Ensure full height */
+      html, body, #root {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
