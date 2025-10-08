@@ -17,38 +17,68 @@ const VesselDetailPage = ({
   const [selectedRoute, setSelectedRoute] = useState(null);
   const cesiumContainerRef = useRef(null);
 
-  // Plot route on Cesium map
+  // Plot route function
   const plotRoute = (route, color = '#FF0000', isCurrentJourney = false) => {
-    if (cesiumViewerRef.current) {
-      plotRouteOnMap(cesiumViewerRef.current, route, color, isCurrentJourney);
+    console.log('🎯 plotRoute called with:', {
+      routeLength: route?.length,
+      color,
+      isCurrentJourney,
+      viewerExists: !!cesiumViewerRef.current
+    });
+
+    if (!cesiumViewerRef.current) {
+      console.error('❌ Viewer not initialized yet!');
+      return;
     }
+
+    plotRouteOnMap(cesiumViewerRef.current, route, color, isCurrentJourney);
   };
 
   // Handle viewing current journey
   const handleViewCurrentJourney = () => {
+    console.log('👉 View Current Journey button clicked');
     setSelectedRoute('current');
     plotRoute(mockCurrentJourney.route, '#0066FF', true);
   };
 
   // Handle viewing historical trip
   const handleViewHistoricalTrip = (trip) => {
+    console.log('👉 View Historical Trip clicked:', trip.from, '→', trip.to);
     setSelectedRoute(trip.id);
     setShowHistoricalTrips(false);
-    plotRoute(trip.route, '#9333EA');
+    plotRoute(trip.route, '#9333EA', false);
   };
 
-  // Initialize CesiumJS
+  // Initialize Cesium
   useEffect(() => {
+    console.log('🔧 VesselDetailPage mounted');
+    console.log('   Container ref:', cesiumContainerRef.current);
+    console.log('   Viewer ref:', cesiumViewerRef.current);
+
     if (cesiumContainerRef.current && !cesiumViewerRef.current) {
+      console.log('📦 Creating new Cesium viewer...');
+      
       const viewer = initializeCesiumViewer(cesiumContainerRef.current);
+      
       if (viewer) {
         cesiumViewerRef.current = viewer;
-        // Plot initial current journey route
-        plotRoute(mockCurrentJourney.route, '#0066FF', true);
+        console.log('✅ Viewer stored in ref');
+        
+        // Plot initial route after a short delay
+        setTimeout(() => {
+          console.log('⏱️  Plotting initial current journey route...');
+          plotRoute(mockCurrentJourney.route, '#0066FF', true);
+          setSelectedRoute('current');
+        }, 500);
+      } else {
+        console.error('❌ Failed to create viewer');
       }
+    } else if (cesiumViewerRef.current) {
+      console.log('ℹ️  Viewer already exists, skipping creation');
     }
 
     return () => {
+      console.log('🧹 VesselDetailPage unmounting');
       if (cesiumViewerRef.current) {
         destroyCesiumViewer(cesiumViewerRef.current);
         cesiumViewerRef.current = null;
@@ -67,7 +97,6 @@ const VesselDetailPage = ({
 
       <div className="max-w-7xl mx-auto px-6 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Left Panel - Widgets */}
           <VesselWidgets
             selectedVessel={selectedVessel}
             activeWidget={activeWidget}
@@ -79,11 +108,9 @@ const VesselDetailPage = ({
             selectedRoute={selectedRoute}
           />
 
-          {/* Right Panel - Cesium Map */}
           <CesiumMapPanel cesiumContainerRef={cesiumContainerRef} />
         </div>
 
-        {/* Historical Trips Section */}
         {showHistoricalTrips && (
           <HistoricalTripsSection 
             mockHistoricalTrips={mockHistoricalTrips}
@@ -97,4 +124,3 @@ const VesselDetailPage = ({
 };
 
 export default VesselDetailPage;
-

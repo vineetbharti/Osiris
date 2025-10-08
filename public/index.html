@@ -20,7 +20,7 @@
     <style>
       /* Hide Cesium bottom credit bar */
       .cesium-viewer .cesium-viewer-bottom {
-        display: none;
+        display: none !important;
       }
       
       /* Ensure full height */
@@ -28,6 +28,12 @@
         height: 100%;
         margin: 0;
         padding: 0;
+      }
+      
+      /* Cesium viewer styling */
+      .cesium-viewer {
+        width: 100%;
+        height: 100%;
       }
     </style>
   </head>
