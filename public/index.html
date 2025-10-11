@@ -10,19 +10,23 @@
     />
     <title>Marine Analytics - Vessel Tracking</title>
     
-    <!-- CesiumJS Library - REQUIRED for 3D Map -->
-    <script src="https://cesium.com/downloads/cesiumjs/releases/1.109/Build/Cesium/Cesium.js"></script>
-    <link href="https://cesium.com/downloads/cesiumjs/releases/1.109/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    <!-- 
+      Google Maps JavaScript API (loads dynamically via googleMapsHelper.js)
+      IMPORTANT: Replace YOUR_GOOGLE_MAPS_API_KEY with your actual API key
+      Get your key from: https://console.cloud.google.com/google/maps-apis
+      
+      If you prefer to load it here instead of dynamically, uncomment below:
+    -->
+    <!-- 
+    <script async defer
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAc7lwB59Oh10F1hnco5Gby35gCVNnH3Rw&libraries=geometry&v=weekly">
+    </script>
+    -->
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
     <style>
-      /* Hide Cesium bottom credit bar */
-      .cesium-viewer .cesium-viewer-bottom {
-        display: none !important;
-      }
-      
       /* Ensure full height */
       html, body, #root {
         height: 100%;
@@ -30,10 +34,14 @@
         padding: 0;
       }
       
-      /* Cesium viewer styling */
-      .cesium-viewer {
-        width: 100%;
-        height: 100%;
+      /* Google Maps overrides for better appearance */
+      .gm-style .gm-style-iw-c {
+        padding: 12px !important;
+        border-radius: 8px !important;
+      }
+      
+      .gm-style .gm-style-iw-d {
+        overflow: auto !important;
       }
     </style>
   </head>

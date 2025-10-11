@@ -18,7 +18,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [vessels, setVessels] = useState({});
   const [selectedVessel, setSelectedVessel] = useState(null);
-  const cesiumViewerRef = useRef(null);
+  // ❌ REMOVED: const cesiumViewerRef = useRef(null);
   
   // Form States
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
@@ -184,7 +184,7 @@ export default function App() {
         selectedVessel={selectedVessel}
         handleBackToFleet={handleBackToFleet}
         handleLogout={handleLogout}
-        cesiumViewerRef={cesiumViewerRef}
+        // ❌ REMOVED: cesiumViewerRef={cesiumViewerRef}
       />
     );
   }

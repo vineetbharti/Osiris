@@ -1,94 +1,41 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import VesselDetailNav from './VesselDetailNav';
 import VesselWidgets from './VesselWidgets';
-import CesiumMapPanel from './CesiumMapPanel';
+import GoogleMapsPanel from './GoogleMapsPanel';
 import HistoricalTripsSection from './HistoricalTripsSection';
 import { mockCurrentJourney, mockHistoricalTrips } from '../../utils/mockData';
-import { initializeCesiumViewer, plotRouteOnMap, destroyCesiumViewer } from '../../utils/cesiumHelper';
 
 const VesselDetailPage = ({ 
   selectedVessel, 
   handleBackToFleet, 
-  handleLogout,
-  cesiumViewerRef 
+  handleLogout
 }) => {
   const [activeWidget, setActiveWidget] = useState('current');
   const [showHistoricalTrips, setShowHistoricalTrips] = useState(false);
-  const [selectedRoute, setSelectedRoute] = useState(null);
-  const cesiumContainerRef = useRef(null);
-
-  // Plot route function
-  const plotRoute = (route, color = '#FF0000', isCurrentJourney = false) => {
-    console.log('🎯 plotRoute called with:', {
-      routeLength: route?.length,
-      color,
-      isCurrentJourney,
-      viewerExists: !!cesiumViewerRef.current
-    });
-
-    if (!cesiumViewerRef.current) {
-      console.error('❌ Viewer not initialized yet!');
-      return;
-    }
-
-    plotRouteOnMap(cesiumViewerRef.current, route, color, isCurrentJourney);
-  };
+  const [selectedTrip, setSelectedTrip] = useState(null);
 
   // Handle viewing current journey
   const handleViewCurrentJourney = () => {
-    console.log('👉 View Current Journey button clicked');
-    setSelectedRoute('current');
-    plotRoute(mockCurrentJourney.route, '#0066FF', true);
+    console.log('📍 Viewing current journey');
+    setSelectedTrip(null);
+    setActiveWidget('current');
   };
 
   // Handle viewing historical trip
   const handleViewHistoricalTrip = (trip) => {
-    console.log('👉 View Historical Trip clicked:', trip.from, '→', trip.to);
-    setSelectedRoute(trip.id);
+    console.log('📍 Viewing historical trip:', trip.from, '→', trip.to);
+    setSelectedTrip(trip);
     setShowHistoricalTrips(false);
-    plotRoute(trip.route, '#9333EA', false);
+    setActiveWidget('historical');
   };
 
-  // Initialize Cesium
-  useEffect(() => {
-    console.log('🔧 VesselDetailPage mounted');
-    console.log('   Container ref:', cesiumContainerRef.current);
-    console.log('   Viewer ref:', cesiumViewerRef.current);
-
-    if (cesiumContainerRef.current && !cesiumViewerRef.current) {
-      console.log('📦 Creating new Cesium viewer...');
-      
-      const viewer = initializeCesiumViewer(cesiumContainerRef.current);
-      
-      if (viewer) {
-        cesiumViewerRef.current = viewer;
-        console.log('✅ Viewer stored in ref');
-        
-        // Plot initial route after a short delay
-        setTimeout(() => {
-          console.log('⏱️  Plotting initial current journey route...');
-          plotRoute(mockCurrentJourney.route, '#0066FF', true);
-          setSelectedRoute('current');
-        }, 500);
-      } else {
-        console.error('❌ Failed to create viewer');
-      }
-    } else if (cesiumViewerRef.current) {
-      console.log('ℹ️  Viewer already exists, skipping creation');
-    }
-
-    return () => {
-      console.log('🧹 VesselDetailPage unmounting');
-      if (cesiumViewerRef.current) {
-        destroyCesiumViewer(cesiumViewerRef.current);
-        cesiumViewerRef.current = null;
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Determine which data to show on map
+  const currentJourneyData = selectedTrip ? null : mockCurrentJourney;
+  const historicalTripsData = selectedTrip ? [selectedTrip] : [];
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Navigation Bar */}
       <VesselDetailNav 
         selectedVessel={selectedVessel}
         handleBackToFleet={handleBackToFleet}
@@ -97,25 +44,31 @@ const VesselDetailPage = ({
 
       <div className="max-w-7xl mx-auto px-6 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Left Panel - Widgets */}
           <VesselWidgets
             selectedVessel={selectedVessel}
             activeWidget={activeWidget}
             setActiveWidget={setActiveWidget}
             setShowHistoricalTrips={setShowHistoricalTrips}
+            handleViewCurrentJourney={handleViewCurrentJourney}
             mockCurrentJourney={mockCurrentJourney}
             mockHistoricalTrips={mockHistoricalTrips}
-            handleViewCurrentJourney={handleViewCurrentJourney}
-            selectedRoute={selectedRoute}
+            currentJourney={mockCurrentJourney}
           />
 
-          <CesiumMapPanel cesiumContainerRef={cesiumContainerRef} />
+          {/* Right Panel - Google Maps 3D */}
+          <GoogleMapsPanel 
+            currentJourney={currentJourneyData}
+            historicalTrips={historicalTripsData}
+          />
         </div>
 
+        {/* Historical Trips Section (Expandable) */}
         {showHistoricalTrips && (
-          <HistoricalTripsSection 
+          <HistoricalTripsSection
             mockHistoricalTrips={mockHistoricalTrips}
-            setShowHistoricalTrips={setShowHistoricalTrips}
             handleViewHistoricalTrip={handleViewHistoricalTrip}
+            setShowHistoricalTrips={setShowHistoricalTrips}
           />
         )}
       </div>
