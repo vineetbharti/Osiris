@@ -158,7 +158,8 @@ async function getSampledRoutePoints(imo, voyageId, sampleCount, client) {
     
     return result.rows.map(row => ({
       lat: parseFloat(row.lat),
-      lon: parseFloat(row.lon)
+      lon: parseFloat(row.lon),
+      timestamp: row.timestamp
     }));
   } catch (error) {
     console.error('Error fetching sampled route points:', error);
@@ -228,9 +229,9 @@ app.get('/api/vessels/:imo/trips', async (req, res) => {
           
           // Build route array: start port + middle points + end port
           const route = [
-            startPortCoords,
+            { ...startPortCoords, timestamp: voyage.start_timestamp },
             ...middlePoints.slice(1, -1), // Take middle 2 points from the 4 sampled
-            endPortCoords
+            { ...endPortCoords, timestamp: voyage.end_timestamp }
           ];
           
           // Format the trip object

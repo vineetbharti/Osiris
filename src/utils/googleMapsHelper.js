@@ -8,6 +8,9 @@
  * Note: 'google' is a global variable loaded from Google Maps script
  */
 
+// Track overlays for cleanup
+let currentOverlays = [];
+
 /**
  * Initialize Google Maps viewer with satellite view for AIS ship tracking
  * @param {HTMLElement} containerRef - The container element for the map
@@ -82,6 +85,22 @@ const loadGoogleMapsScript = (apiKey) => {
     
     script.onload = () => {
       console.log('✅ Google Maps script loaded');
+      
+      // Inject CSS to hide info window close button
+      const style = document.createElement('style');
+      style.textContent = `
+        .gm-style-iw button[title="Close"] {
+          display: none !important;
+        }
+        .gm-style-iw-c button[aria-label="Close"] {
+          display: none !important;
+        }
+        .gm-ui-hover-effect {
+          display: none !important;
+        }
+      `;
+      document.head.appendChild(style);
+      
       resolve();
     };
     
@@ -97,7 +116,7 @@ const loadGoogleMapsScript = (apiKey) => {
 /**
  * Plot a route on the Google Maps viewer (for ship AIS data)
  * @param {google.maps.Map} map - The map instance
- * @param {Array} route - Array of waypoints [{name, lat, lon}, ...]
+ * @param {Array} route - Array of waypoints [{name, lat, lon, timestamp}, ...]
  * @param {string} color - Color for the route line (hex color)
  */
 export const plotRouteOnGoogleMaps = (map, route, color = '#0066FF') => {
@@ -111,11 +130,14 @@ export const plotRouteOnGoogleMaps = (map, route, color = '#0066FF') => {
     return;
   }
 
-  console.log(`\n🗺️ PLOTTING ROUTE ON GOOGLE MAPS`);
+  console.log(`\n🗺️ PLOTING ROUTE ON GOOGLE MAPS`);
   console.log(`📍 Waypoints: ${route.length}`);
   console.log(`🎨 Color: ${color}`);
 
   try {
+    // Clear previous overlays before plotting new route
+    clearMapOverlays(map);
+
     // Check if google.maps.Polyline is available
     if (!google.maps.Polyline) {
       console.error('❌ Google Maps Polyline not available');
@@ -160,6 +182,9 @@ export const plotRouteOnGoogleMaps = (map, route, color = '#0066FF') => {
       map: map
     });
 
+    // Track for cleanup
+    currentOverlays.push(polyline);
+
     console.log('✅ Route line drawn');
 
     // Add markers for each waypoint (ports/waypoints)
@@ -173,19 +198,22 @@ export const plotRouteOnGoogleMaps = (map, route, color = '#0066FF') => {
       const isFirst = i === 0;
       const isLast = i === route.length - 1;
 
-      // Determine marker color and size
-      let markerColor = '#FFD700'; // Yellow for intermediate waypoints
+      // Professional color scheme
+      let markerColor = color; // Match route color for intermediate points
       let markerLabel = '';
+      let markerScale = 4; // Small dots for intermediate waypoints
 
       if (isFirst) {
-        markerColor = '#00FF00'; // Green for departure port
+        markerColor = '#10B981'; // Professional green for start
         markerLabel = 'S';
+        markerScale = 10;
       } else if (isLast) {
-        markerColor = '#FF0000'; // Red for arrival port
+        markerColor = '#EF4444'; // Professional red for end
         markerLabel = 'E';
+        markerScale = 10;
       }
 
-      // Create custom marker for ports
+      // Create marker
       const marker = new google.maps.Marker({
         position: { lat, lng: lon },
         map: map,
@@ -193,30 +221,42 @@ export const plotRouteOnGoogleMaps = (map, route, color = '#0066FF') => {
         label: markerLabel ? {
           text: markerLabel,
           color: 'white',
-          fontSize: '14px',
+          fontSize: '12px',
           fontWeight: 'bold'
         } : undefined,
         icon: {
           path: google.maps.SymbolPath.CIRCLE,
-          scale: isFirst || isLast ? 12 : 8,
+          scale: markerScale,
           fillColor: markerColor,
-          fillOpacity: 1,
+          fillOpacity: 0.9,
           strokeColor: 'white',
           strokeWeight: 2
         }
       });
 
-      // Add info window on click (port information)
+      // Track for cleanup
+      currentOverlays.push(marker);
+
+      // Create hover tooltip content
+      const tooltipContent = createTooltipContent(pt, lat, lon, isFirst, isLast);
+
+      // Create info window for hover (no close button)
       const infoWindow = new google.maps.InfoWindow({
-        content: `<div style="padding: 8px;">
-          <strong>${pt.name}</strong><br/>
-          <small>Lat: ${lat.toFixed(4)}, Lng: ${lon.toFixed(4)}</small>
-        </div>`
+        content: tooltipContent,
+        disableAutoPan: true // Prevent map from panning when tooltip shows
       });
 
-      marker.addListener('click', () => {
+      // Show on hover, hide on mouseout
+      marker.addListener('mouseover', () => {
         infoWindow.open(map, marker);
       });
+
+      marker.addListener('mouseout', () => {
+        infoWindow.close();
+      });
+
+      // Track info window for cleanup
+      currentOverlays.push(infoWindow);
     }
 
     console.log('✅ Markers added');
@@ -244,17 +284,105 @@ export const plotRouteOnGoogleMaps = (map, route, color = '#0066FF') => {
 };
 
 /**
- * Clear all overlays from the map (call this before plotting new routes)
- * Note: This is a simple version. In production, you'd want to track overlays
+ * Create tooltip content for hover
+ * @param {Object} pt - Point data
+ * @param {number} lat - Latitude
+ * @param {number} lon - Longitude
+ * @param {boolean} isFirst - Is first point
+ * @param {boolean} isLast - Is last point
+ * @returns {string} HTML content for tooltip
+ */
+const createTooltipContent = (pt, lat, lon, isFirst, isLast) => {
+  let pointType = '📍 Waypoint';
+  if (isFirst) pointType = '🟢 Start Port';
+  if (isLast) pointType = '🔴 End Port';
+
+  // Format timestamp if available
+  let timestampStr = 'N/A';
+  if (pt.timestamp) {
+    try {
+      const date = new Date(pt.timestamp);
+      timestampStr = date.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (e) {
+      timestampStr = pt.timestamp;
+    }
+  }
+
+  return `
+    <div style="
+      padding: 12px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      min-width: 200px;
+    ">
+      <div style="
+        font-weight: 600;
+        font-size: 13px;
+        color: #1f2937;
+        margin-bottom: 8px;
+        border-bottom: 1px solid #e5e7eb;
+        padding-bottom: 6px;
+      ">
+        ${pointType}
+      </div>
+      
+      ${pt.name ? `
+        <div style="
+          font-weight: 500;
+          font-size: 12px;
+          color: #374151;
+          margin-bottom: 6px;
+        ">
+          ${pt.name}
+        </div>
+      ` : ''}
+      
+      <div style="
+        font-size: 11px;
+        color: #6b7280;
+        line-height: 1.6;
+      ">
+        <div style="margin-bottom: 3px;">
+          <strong>Time:</strong> ${timestampStr}
+        </div>
+        <div style="margin-bottom: 3px;">
+          <strong>Lat:</strong> ${lat.toFixed(6)}°
+        </div>
+        <div>
+          <strong>Lon:</strong> ${lon.toFixed(6)}°
+        </div>
+      </div>
+    </div>
+  `;
+};
+
+/**
+ * Clear all overlays from the map
  * @param {google.maps.Map} map - The map instance
  */
 export const clearMapOverlays = (map) => {
   if (!map) return;
   
-  // Note: Google Maps doesn't have a built-in "clear all" method
-  // You need to keep track of your overlays and remove them individually
-  // This is a placeholder - implement based on your needs
-  console.log('⚠️ Clear overlays - implement overlay tracking for production use');
+  console.log(`🗑️ Clearing ${currentOverlays.length} overlays from map`);
+  
+  // Remove all tracked overlays
+  currentOverlays.forEach(overlay => {
+    if (overlay.setMap) {
+      overlay.setMap(null);
+    } else if (overlay.close) {
+      overlay.close();
+    }
+  });
+  
+  // Clear the array
+  currentOverlays = [];
+  
+  console.log('✅ Map overlays cleared');
 };
 
 /**
@@ -264,6 +392,9 @@ export const clearMapOverlays = (map) => {
 export const destroyGoogleMapsViewer = (map) => {
   if (map) {
     try {
+      // Clear overlays first
+      clearMapOverlays(map);
+      
       // Google Maps doesn't have a destroy method
       // Clear the container instead
       if (google && google.maps && google.maps.event) {
