@@ -117,12 +117,29 @@ async function getPortCoordinates(portName, client) {
 }
 
 /**
- * Calculate duration between two dates
+ * Calculate duration between two dates in days-hours-mins format
  */
 function calculateDuration(startDate, endDate) {
-  const diffTime = Math.abs(endDate - startDate);
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return `${diffDays} days`;
+  // Ensure we're working with Date objects
+  const start = startDate instanceof Date ? startDate : new Date(startDate);
+  const end = endDate instanceof Date ? endDate : new Date(endDate);
+  
+  // Calculate difference in milliseconds
+  const diffMs = Math.abs(end.getTime() - start.getTime());
+  
+  // Convert to days, hours, minutes
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+  
+  // Build duration string
+  const parts = [];
+  if (days > 0) parts.push(`${days}d`);
+  if (hours > 0) parts.push(`${hours}h`);
+  if (minutes > 0) parts.push(`${minutes}m`);
+  
+  // If duration is 0, show "0m"
+  return parts.length > 0 ? parts.join(' ') : '0m';
 }
 
 /**
@@ -183,22 +200,49 @@ app.get('/api/vessels/:imo/trips', async (req, res) => {
         console.log(`   └─ Connected to database`);
         
         // Get all voyages with start and end timestamps
+        // Data structure: start_port is set at voyage start, end_port is set at voyage end
+        // Use LAST record for port information, FIRST record for start time, LAST record for end time
         const voyageQuery = `
+          WITH voyage_bounds AS (
+            SELECT 
+              voyage_id,
+              sub_voyage_id,
+              MIN(timestamp) as start_timestamp,
+              MAX(timestamp) as end_timestamp
+            FROM ais_data_voyage
+            WHERE imo = $1
+              AND voyage_id IS NOT NULL
+            GROUP BY voyage_id, sub_voyage_id
+            HAVING MIN(timestamp) != MAX(timestamp)
+          ),
+          voyage_ports AS (
+            SELECT DISTINCT ON (adv.voyage_id, adv.sub_voyage_id)
+              adv.voyage_id,
+              adv.sub_voyage_id,
+              adv.start_port,
+              adv.end_port
+            FROM ais_data_voyage adv
+            INNER JOIN voyage_bounds vb ON 
+              adv.voyage_id = vb.voyage_id 
+              AND adv.sub_voyage_id = vb.sub_voyage_id
+            WHERE adv.imo = $1
+              AND adv.end_port IS NOT NULL
+              AND adv.start_port IS NOT NULL
+              AND adv.start_port != adv.end_port
+            ORDER BY adv.voyage_id, adv.sub_voyage_id, adv.timestamp DESC
+          )
           SELECT 
-            voyage_id,
-            sub_voyage_id,
-            start_port,
-            end_port,
-            MIN(timestamp) as start_timestamp,
-            MAX(timestamp) as end_timestamp
-          FROM ais_data_voyage
-          WHERE imo = $1
-            AND voyage_id IS NOT NULL
-            AND start_port IS NOT NULL
-            AND end_port IS NOT NULL
-            AND start_port != end_port
-          GROUP BY voyage_id, sub_voyage_id, start_port, end_port
-          ORDER BY start_timestamp DESC
+            vb.voyage_id,
+            vb.sub_voyage_id,
+            vp.start_port,
+            vp.end_port,
+            vb.start_timestamp,
+            vb.end_timestamp
+          FROM voyage_bounds vb
+          INNER JOIN voyage_ports vp ON 
+            vb.voyage_id = vp.voyage_id 
+            AND vb.sub_voyage_id = vp.sub_voyage_id
+          ORDER BY vb.start_timestamp DESC
           LIMIT $2
         `;
         
@@ -324,6 +368,8 @@ app.get('/api/vessels/:imo/summary', async (req, res) => {
 });
 
 // Cache management endpoints
+
+// Delete all cache for a specific vessel (trips + summary + related ports)
 app.delete('/api/cache/vessels/:imo', async (req, res) => {
   const { imo } = req.params;
   try {
@@ -339,10 +385,63 @@ app.delete('/api/cache/vessels/:imo', async (req, res) => {
   }
 });
 
+// Delete ONLY voyage data for a specific vessel (keep ports)
+app.delete('/api/cache/voyages/:imo', async (req, res) => {
+  const { imo } = req.params;
+  try {
+    const tripKeys = await redisClient.keys(`trips:${imo}:*`);
+    const summaryKeys = await redisClient.keys(`summary:${imo}`);
+    const keysToDelete = [...tripKeys, ...summaryKeys];
+    
+    if (keysToDelete.length > 0) {
+      await redisClient.del(keysToDelete);
+      res.json({ 
+        success: true, 
+        message: `Cleared ${keysToDelete.length} voyage cache entries for vessel ${imo} (ports preserved)`,
+        deletedKeys: keysToDelete,
+        deletedTypes: {
+          trips: tripKeys.length,
+          summary: summaryKeys.length
+        }
+      });
+    } else {
+      res.json({ success: true, message: 'No voyage cache entries found' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete ALL voyage data (keep all ports)
+app.delete('/api/cache/voyages', async (req, res) => {
+  try {
+    const tripKeys = await redisClient.keys('trips:*');
+    const summaryKeys = await redisClient.keys('summary:*');
+    const keysToDelete = [...tripKeys, ...summaryKeys];
+    
+    if (keysToDelete.length > 0) {
+      await redisClient.del(keysToDelete);
+      res.json({ 
+        success: true, 
+        message: `Cleared ${keysToDelete.length} voyage cache entries (all ports preserved)`,
+        deletedTypes: {
+          trips: tripKeys.length,
+          summary: summaryKeys.length
+        }
+      });
+    } else {
+      res.json({ success: true, message: 'No voyage cache entries found' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete ALL cache (including ports)
 app.delete('/api/cache/all', async (req, res) => {
   try {
     await redisClient.flushAll();
-    res.json({ success: true, message: 'All cache cleared' });
+    res.json({ success: true, message: 'All cache cleared (including ports)' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -400,6 +499,8 @@ app.listen(port, () => {
   console.log(`  GET /api/health`);
   console.log(`  GET /api/vessels/:imo/trips`);
   console.log(`  GET /api/vessels/:imo/summary`);
-  console.log(`  DELETE /api/cache/vessels/:imo`);
-  console.log(`  DELETE /api/cache/all\n`);
+  console.log(`  DELETE /api/cache/vessels/:imo (all cache for vessel)`);
+  console.log(`  DELETE /api/cache/voyages/:imo (only voyages, keep ports)`);
+  console.log(`  DELETE /api/cache/voyages (all voyages, keep ports)`);
+  console.log(`  DELETE /api/cache/all (delete everything)\n`);
 });
