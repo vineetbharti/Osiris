@@ -1,15 +1,19 @@
 import React from 'react';
+import VesselImage from './VesselImage';
 
 /**
  * EntityHeader — large heading for an entity (vessel or port).
- * Renders a monogram thumbnail, name, and meta line.
+ * Renders a thumbnail (image or monogram), name, and meta line.
  *
  * @param {string} name        Display name (e.g., "Maersk Hamilton")
- * @param {string} monogram    2-3 character abbreviation (e.g., "MH")
- * @param {string} meta        Sub-line (e.g., "IMO 9434728 · Cargo · Flag DK")
- * @param {React.ReactNode} actions  Optional right-side actions
+ * @param {string} [monogram]  2-3 character abbreviation, used when no imageUrl
+ * @param {string} [imageUrl]  Image URL — preferred over monogram when present
+ * @param {string} [meta]      Sub-line (e.g., "IMO 9434728 · Cargo · Flag DK")
+ * @param {React.ReactNode} [actions]  Optional right-side actions
  */
-export default function EntityHeader({ name, monogram, meta, actions }) {
+export default function EntityHeader({ name, monogram, imageUrl, meta, actions }) {
+  const showThumb = imageUrl || monogram;
+
   return (
     <div
       style={{
@@ -19,25 +23,12 @@ export default function EntityHeader({ name, monogram, meta, actions }) {
         marginBottom: 14,
       }}
     >
-      {monogram && (
-        <div
-          style={{
-            width: 60,
-            height: 60,
-            borderRadius: 'var(--border-radius-md)',
-            background: 'var(--color-background-secondary)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 16,
-            fontWeight: 500,
-            color: 'var(--color-text-secondary)',
-            flexShrink: 0,
-            letterSpacing: '0.02em',
-          }}
-        >
-          {monogram}
-        </div>
+      {showThumb && (
+        <VesselImage
+          url={imageUrl}
+          name={name || monogram || ''}
+          size={60}
+        />
       )}
       <div style={{ flex: 1, minWidth: 0 }}>
         <h1

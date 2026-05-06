@@ -93,7 +93,12 @@ export default function VesselIntelligencePage() {
     <PageShell>
       <div style={{ padding: '20px 20px 28px' }}>
         <Breadcrumb items={[{ label: 'Fleet', to: '/fleet' }, { label: vessel.name }]} />
-        <EntityHeader name={vessel.name} monogram={monogram(vessel.name)} meta={meta} />
+        <EntityHeader
+          name={vessel.name}
+          monogram={monogram(vessel.name)}
+          imageUrl={vessel.imageUrl}
+          meta={meta}
+        />
         <SpecsStrip items={specs} />
 
         <StatusBar status={status} />
@@ -116,28 +121,52 @@ export default function VesselIntelligencePage() {
 
         <SectionHeading
           title="Voyage profiles"
-          action="Compare in Optimization Lab →"
+          action={profiles.length > 0 ? 'Compare in Optimization Lab →' : null}
         />
-        <ColumnHeader
-          gap={12}
-          gridTemplate="minmax(0, 1.55fr) minmax(0, 1.45fr) 88px 88px 88px 90px 16px"
-          columns={[
-            { label: 'Profile' },
-            { label: 'Action' },
-            { label: 'ETA' },
-            { label: 'Anchorage' },
-            { label: 'Berth' },
-            { label: 'Cost' },
-            { label: '' },
-          ]}
-        />
-        {profiles.map((p) => (
-          <ProfileCard
-            key={p.id}
-            profile={p}
-            defaultExpanded={p.isCurrent || p.isRecommended}
-          />
-        ))}
+        {profiles.length > 0 ? (
+          <>
+            <ColumnHeader
+              gap={12}
+              gridTemplate="minmax(0, 1.55fr) minmax(0, 1.45fr) 88px 88px 88px 90px 16px"
+              columns={[
+                { label: 'Profile' },
+                { label: 'Action' },
+                { label: 'ETA' },
+                { label: 'Anchorage' },
+                { label: 'Berth' },
+                { label: 'Cost' },
+                { label: '' },
+              ]}
+            />
+            {profiles.map((p) => (
+              <ProfileCard
+                key={p.id}
+                profile={p}
+                defaultExpanded={p.isCurrent || p.isRecommended}
+              />
+            ))}
+          </>
+        ) : (
+          <div
+            style={{
+              padding: '20px 16px',
+              border: '0.5px dashed var(--color-border-tertiary)',
+              borderRadius: 'var(--border-radius-lg)',
+              color: 'var(--color-text-secondary)',
+              fontSize: 13,
+              lineHeight: 1.5,
+            }}
+          >
+            <p style={{ margin: '0 0 4px', color: 'var(--color-text-primary)', fontWeight: 500 }}>
+              Recommendations not yet available for this vessel.
+            </p>
+            <p style={{ margin: 0 }}>
+              Profiles are generated once the recommendation engine has observed enough AIS data
+              for this IMO. Newly added vessels typically begin showing recommendations within 24
+              hours of their next voyage.
+            </p>
+          </div>
+        )}
       </div>
     </PageShell>
   );

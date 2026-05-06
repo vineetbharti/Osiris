@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Card, Input, Button } from '../../design-system/primitives';
-import { CoverageBadge } from '../../design-system/patterns';
+import { CoverageBadge, VesselImage } from '../../design-system/patterns';
 
 /**
  * AddVesselModal — IMO search + confirm-and-add flow.
@@ -136,27 +136,33 @@ export default function AddVesselModal({ onClose, searchByImo, addVessel, existi
                 marginBottom: 14,
               }}
             >
-              <p style={{ fontSize: 14, fontWeight: 500, margin: '0 0 4px' }}>
-                {searchResult.name}
-              </p>
-              <p
-                className="tabular"
-                style={{
-                  fontSize: 12,
-                  color: 'var(--color-text-secondary)',
-                  margin: '0 0 10px',
-                }}
-              >
-                IMO {searchResult.imo} · {searchResult.type}
-                {searchResult.flag && ` · Flag ${searchResult.flag}`}
-              </p>
-              <CoverageBadge status={searchResult.coverage || 'available'} />
+              <div style={{ display: 'flex', gap: 12, marginBottom: 10 }}>
+                <VesselImage url={searchResult.imageUrl} name={searchResult.name} size={64} />
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <p style={{ fontSize: 14, fontWeight: 500, margin: '0 0 4px' }}>
+                    {searchResult.name}
+                  </p>
+                  <p
+                    className="tabular"
+                    style={{
+                      fontSize: 12,
+                      color: 'var(--color-text-secondary)',
+                      margin: '0 0 6px',
+                    }}
+                  >
+                    IMO {searchResult.imo} · {searchResult.type}
+                    {searchResult.flag && ` · Flag ${searchResult.flag}`}
+                    {searchResult.yearBuilt && ` · Built ${searchResult.yearBuilt}`}
+                  </p>
+                  <CoverageBadge status={searchResult.coverage || 'available'} />
+                </div>
+              </div>
               <Button
                 onClick={onAdd}
                 variant="primary"
                 size="sm"
                 disabled={isAdding}
-                style={{ marginTop: 14, width: '100%' }}
+                style={{ marginTop: 4, width: '100%' }}
               >
                 {isAdding ? 'Adding…' : 'Add to fleet'}
               </Button>

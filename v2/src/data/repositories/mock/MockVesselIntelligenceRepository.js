@@ -1,11 +1,31 @@
 import { IVesselIntelligenceRepository } from '../interfaces/IVesselIntelligenceRepository';
 import { FIXTURE_VESSELS } from '../../fixtures/vessels';
 import { FIXTURE_VOYAGE_PROFILES_BY_IMO } from '../../fixtures/voyageProfiles';
+import { fleetRepo } from '../index';
 
+/**
+ * MockVesselIntelligenceRepository — operational state + voyage profiles.
+ *
+ * Resolution order for the vessel itself:
+ *   1. Demo fixtures (FIXTURE_VESSELS) — full operational data
+ *   2. The current fleet repo (covers vessels added via API search)
+ *
+ * Vessels found via fallback path #2 won't have profiles or operational state
+ * yet — the recommendation engine hasn't run for them. We return what we
+ * have and an empty profile list. Components handle the empty state.
+ */
 export class MockVesselIntelligenceRepository extends IVesselIntelligenceRepository {
   async getCurrentState(imo) {
     await new Promise((r) => setTimeout(r, 200));
-    const vessel = FIXTURE_VESSELS.find((v) => v.imo === imo);
+
+    // Demo fixture path
+    let vessel = FIXTURE_VESSELS.find((v) => v.imo === imo);
+
+    // Fallback to the user's fleet (catches API-added vessels)
+    if (!vessel) {
+      vessel = await fleetRepo.getByImo(imo);
+    }
+
     if (!vessel) return null;
 
     const profiles = FIXTURE_VOYAGE_PROFILES_BY_IMO[imo] || [];
@@ -18,7 +38,11 @@ export class MockVesselIntelligenceRepository extends IVesselIntelligenceReposit
 
   async getTrack(imo) {
     await new Promise((r) => setTimeout(r, 100));
-    // Synthetic AIS track for demo. Replace with real data via TimescaleDB query.
+    // Synthetic AIS track for demo vessels only. Real implementation queries
+    // TimescaleDB by IMO + time range. Returns null for vessels we have no
+    // track data for.
+    const hasTrack = FIXTURE_VOYAGE_PROFILES_BY_IMO[imo];
+    if (!hasTrack) return null;
     return {
       observed: [
         [56.16, 10.21], // Aarhus

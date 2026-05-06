@@ -6,3 +6,4 @@ export { default as DeltaText } from './DeltaText';
 export { default as MethodologyCaveat } from './MethodologyCaveat';
 export { default as EntityHeader } from './EntityHeader';
 export { default as DataRow, Chevron, ColumnHeader } from './DataRow';
+export { default as VesselImage } from './VesselImage';

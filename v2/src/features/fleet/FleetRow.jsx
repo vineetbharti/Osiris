@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { StatusDot } from '../../design-system/primitives';
-import { CoverageBadge, DataRow, Chevron } from '../../design-system/patterns';
+import { CoverageBadge, DataRow, Chevron, VesselImage } from '../../design-system/patterns';
 import { statusLabel, statusTone } from '../../utils/format';
 
 /**
@@ -25,21 +25,34 @@ export default function FleetRow({ vessel }) {
           alignItems: 'center',
         }}
       >
-        <div>
-          <p style={{ fontSize: 14, fontWeight: 500, margin: '0 0 3px', lineHeight: 1.3 }}>
-            {vessel.name}
-          </p>
-          <p
-            className="tabular"
-            style={{
-              fontSize: 12,
-              color: 'var(--color-text-secondary)',
-              margin: 0,
-              lineHeight: 1.3,
-            }}
-          >
-            IMO {vessel.imo} · {vessel.type}
-          </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+          <VesselImage url={vessel.imageUrl} name={vessel.name} size={40} />
+          <div style={{ minWidth: 0 }}>
+            <p
+              style={{
+                fontSize: 14,
+                fontWeight: 500,
+                margin: '0 0 3px',
+                lineHeight: 1.3,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {vessel.name}
+            </p>
+            <p
+              className="tabular"
+              style={{
+                fontSize: 12,
+                color: 'var(--color-text-secondary)',
+                margin: 0,
+                lineHeight: 1.3,
+              }}
+            >
+              IMO {vessel.imo} · {vessel.type}
+            </p>
+          </div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
